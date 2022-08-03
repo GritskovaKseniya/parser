@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "target": "ES2019",
+        "module": "commonjs",
+        "sourceMap": true,
+        "outDir": "./build",
+        "lib": [
+            "DOM",
+            "ES6",
+            "DOM.Iterable",
+            "ScriptHost",
+            "es2019"
+        ]
+    }
+}
