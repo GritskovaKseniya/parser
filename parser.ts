@@ -144,6 +144,18 @@ function some<T>(p: Parser<T>): Parser<T[]> {
     })
 }
 
+function maybe<T>(p: Parser<T>): Parser<T[]> {
+    return ((str) => {
+        console.log("MAYBE", str)
+        const res = p(str);
+        
+        if (!isOk(res)) {
+            return [[], str];
+        }
+        return [[res[0]], res[1]];
+    })
+}
+
 /**
  * Принимает функцию о строкой в качестве параметра.
  * Возвращает один или более успхов.
@@ -188,16 +200,59 @@ function char(c: string): Parser<string> {
  */
 const ALPHA_NUM = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 
+/**  Grammar:
+ * Query -> BlockSequence
+ * BlockSequence -> Block ('.' Block)*
+ * Block -> Word ('[' blockSequence ']')?
+ * Word -> [a-zA-Z0-9]+
+ */
+
+ interface Block {
+    word: string, // Word in block
+    index: Block[], // Blocks in brackets. Empty if no brackets present
+}
+
 const alphaNumericChar = charPredicate((s) => ALPHA_NUM.includes(s))
-const block = map(some(alphaNumericChar), (s) => s.join("")); // TODO: processing square brackes
-const blockSequence = map(and(block, many(then(char('.'), block))), ([b, lst]) => [b, ...lst]);
+const word = map(some(alphaNumericChar), s => s.join(""))
+
+// Mutual recursive parsers defined as factory functions
+function blockFactory(): Parser<Block> {
+    return map(
+        and(word, maybe(then(char('['), before(blockSequenceFactory(), char(']'))))),
+        ([word, maybeWords]) => {
+            console.log("BF", maybeWords)
+            if (maybeWords.length === 0) {
+                return {
+                    word,
+                    index: []
+                }
+            }
+
+            return {
+                word,
+                index: maybeWords[1]
+            }
+        }
+)}
+
+function blockSequenceFactory(): Parser<Block[]> {
+    return map(
+        and(blockFactory(), many(then(char('.'), blockFactory()))),
+        ([b, lst]) => [b, ...lst]
+    )
+}
+
+
+// Actual parsers
+const block = blockFactory()
+const blockSequence = blockSequenceFactory()
 
 const query = blockSequence;
+// books[currentBook].page
+const query_r = query("books[currentBook].page");
+console.log(query_r);
 
-var query_r = query("address.city");
-
-var context =
-{
+const context = {
     name: "Donald",
     age: 18,
     address: {
@@ -218,12 +273,6 @@ var context =
 
 function parser1(context, arr) {
     var result = arr.reduce((acc, val) => acc[val], context)
-    if(result === undefined) {
-        console.log("incorrectly entered query")
-    } else {
-        console.log(result)
-    }
+    console.log(result)
     return result;
 }
-if (query_r !== null) { parser1(context, query_r[0]); }
-else { console.log("error")}
