@@ -1,3 +1,6 @@
+type ParserResult<T> = [T, string] | null
+type Parser<T> = (str: string) => ParserResult<T>;
+
 function isOk(res) {
     return res !== null;
 }
@@ -155,18 +158,22 @@ function char(c) {
     }
     return charPredicate(s => s === c);
 }
+
 /**  Grammar:
  * Query -> BlockSequence
  * BlockSequence -> Block ('.' Block)*
- * Block -> ALPHA_NUM ('[' blockSequence ']')?
+ * Block -> ALPHA_NUM | ALPHA_NUM ('[' blockSequence ']')?
  * ALPHA_NUM -> [a-zA-Z0-9]+
  */
+
 const ALPHA_NUM = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const alphaNumericChar = charPredicate((s) => ALPHA_NUM.includes(s));
 const block = map(some(alphaNumericChar), (s) => s.join("")); // TODO: processing square brackes
 const blockSequence = map(and(block, many(then(char('.'), block))), ([b, lst]) => [b, ...lst]);
 const query = blockSequence;
 var query_r = query("address.city");
+// books[currentBook].page
+    // ['books', '1', 'page']
 var context = {
     name: "Donald",
     age: 18,
@@ -185,6 +192,7 @@ var context = {
     ],
     currentBook: 1,
 };
+
 function parser1(context, arr) {
     var result = arr.reduce((acc, val) => acc[val], context);
     if (result === undefined) {
